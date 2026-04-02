@@ -114,6 +114,7 @@ nav .logo-text {
     display: none;
     flex-direction: column;
     align-items: stretch;
+    /* Menu flottant : ne pousse pas le contenu, ne bloque pas les clics */
     position: absolute;
     top: 56px;
     left: 0;
@@ -128,6 +129,17 @@ nav .logo-text {
   }
   .nav-links.open { display: flex; }
   .nav-links a { padding: 12px 16px; border-radius: 8px; font-size: 14px; }
+}
+
+/* ===== FIX iOS SAFARI =====
+   Sur iPhone/iPad, Safari n'envoie pas les evenements click sur les elements
+   non-cliquables nativement (div, li, span) SAUF si on leur met cursor:pointer.
+   Ce fix couvre tous les elements interactifs du projet. */
+.mode-btn,
+.participant-pill,
+.match-card,
+[onclick] {
+  cursor: pointer;
 }
 
 /* Le principal */
