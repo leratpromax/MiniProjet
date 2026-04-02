@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duels – WIDOX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSSévent.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo-text">WIDOX</span>
+  <div class="nav-links" id="nav-links">
+    <a href="index.html">Accueil</a>
+    <a href="page2.html" class="active">Duels</a>
+    <a href="page3.html">Classement</a>
+  </div>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleNav()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="wide">
+  <div class="hero-label red">Phase de combat</div>
+  <h1>⚔️ Les <span class="accent2">Duels</span></h1>
+
+  <div class="info-bar" id="info-bar">Chargement des participants…</div>
+
+  <!-- Sélection -->
+  <div class="card">
+    <div class="card-title">Type de duel</div>
+    <div class="mode-grid" id="mode-grid">
+      <div class="mode-btn selected" data-mode="1v1" onclick="selectMode(this)"><span class="mode-icon">👤⚔️👤</span>1 vs 1</div>
+      <div class="mode-btn" data-mode="1v2" onclick="selectMode(this)"><span class="mode-icon">👤⚔️👥</span>1 vs 2</div>
+      <div class="mode-btn" data-mode="2v2" onclick="selectMode(this)"><span class="mode-icon">👥⚔️👥</span>2 vs 2</div>
+      <div class="mode-btn" data-mode="1v3" onclick="selectMode(this)">
+      <span class="mode-icon">👤⚔️<img src="IMG_personnage2.png" alt="groupe" style="height:24px;vertical-align:middle;"></span>
+      1 vs 3
+      </div>
+
+      <div class="mode-btn" data-mode="free" onclick="selectMode(this)"><span class="mode-icon">⚙️</span>Libre</div>
+    </div>
+    <div id="mode-desc" style="font-size:13px;color:var(--muted);margin-bottom:20px;"></div>
+
+    <!-- Faire les équipes -->
+    <div id="matchup-zone" class="visible">
+      <hr class="section-sep">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <span style="font-weight:700;">Construis le match :</span>
+        <button class="btn btn-outline" onclick="clearSelection()" style="padding:6px 14px;font-size:12px;">Réinitialiser</button>
+      </div>
+
+      <!-- Mode libre -->
+      <div class="team-target-toggle" id="free-target-toggle" style="display:none;">
+        <span>Ajouter dans →</span>
+        <button class="target-btn active-a" id="btn-target-a" onclick="setTarget('A')">🔵 Équipe A</button>
+        <button class="target-btn" id="btn-target-b" onclick="setTarget('B')">🔴 Équipe B</button>
+      </div>
+
+      <div class="team-builder">
+        <div class="team-box team-a">
+          <h3>🔵 ÉQUIPE A</h3>
+          <div id="team-a-display" style="color:var(--muted);font-size:13px;">Clique sur des participants →</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="team-box team-b">
+          <h3>🔴 ÉQUIPE B</h3>
+          <div id="team-b-display" style="color:var(--muted);font-size:13px;">← Clique sur des participants</div>
+        </div>
+      </div>
+
+      <div id="pills-zone" style="margin-bottom:20px;"></div>
+      <button class="btn btn-red" onclick="ajouterMatch()">⚔️ Créer ce match</button>
+    </div>
+  </div>
+
+  <!-- Liste de matchs -->
+  <div class="card">
+    <div class="card-title">Matchs <span id="match-count" style="font-size:14px;color:var(--muted);font-family:'Outfit';font-weight:400;margin-left:6px;"></span></div>
+    <div id="matches-list">
+      <div class="empty-state"><span>⚔️</span>Aucun match créé. Configure un duel ci-dessus !</div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="genMatchs()" style="font-size:12px;padding:10px 18px;">🔀 Générer tous les 1v1</button>
+      <button class="btn" onclick="window.location='page3.html'" style="font-size:12px;padding:10px 18px;">🏆 Voir le classement →</button>
+      <button class="btn btn-reset" onclick="resetTout()">🔄️ Réinisilisation des duels</button>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function resetTout() {
+    if (confirm('⚠️ Supprimer TOUTES les données en rapport avec les matches, les duels et les scores) ?')) {
+      localStorage.removeItem('widox_matches');
+      localStorage.removeItem('widox_duels');
+      localStorage.removeItem('widox_scores');
+      location.reload();
+    }
+  }
+
+  let participants = JSON.parse(localStorage.getItem('widox_participants') || '[]');
+  let matches     = JSON.parse(localStorage.getItem('widox_matches') || '[]');
+  let event       = JSON.parse(localStorage.getItem('widox_event') || 'null');
+
+  let mode = '1v1';
+  let teamA = [], teamB = [];
+  // En mode libre, on choisit vers quelle équipe on ajoute
+  let freeTarget = 'A'; // 'A' ou 'B'
+
+  const limits = { '1v1':[1,1], '1v2':[1,2], '2v2':[2,2], '1v3':[1,3], 'free':[Infinity,Infinity] };
+
+  function toggleNav() {
+    document.getElementById('nav-links').classList.toggle('open');
+  }
+
+  function saveMatches() { localStorage.setItem('widox_matches', JSON.stringify(matches)); }
+  function saveParticipants() { localStorage.setItem('widox_participants', JSON.stringify(participants)); }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function init() {
+    const bar = document.getElementById('info-bar');
+    if (!participants.length) {
+      bar.innerHTML = '⚠️ <strong>Aucun participant.</strong> <a href="index.html" style="color:var(--accent)">→ Retourne sur l\'accueil pour en ajouter.</a>';
+    } else {
+      bar.innerHTML = `${event ? '<strong>' + event.nom + '</strong> · ' : ''}${participants.length} participant(s) chargés · ${matches.length} match(s) enregistrés`;
+    }
+    renderPills();
+    renderMatches();
+    updateModeDesc();
+  }
+
+  function selectMode(el) {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    mode = el.dataset.mode;
+    teamA = []; teamB = [];
+    freeTarget = 'A';
+    // Afficher/masquer le sélecteur d'équipe cible en mode libre
+    const toggle = document.getElementById('free-target-toggle');
+    toggle.style.display = mode === 'free' ? 'flex' : 'none';
+    // Réinitialiser les boutons target
+    document.getElementById('btn-target-a').className = 'target-btn active-a';
+    document.getElementById('btn-target-b').className = 'target-btn';
+    renderPills();
+    updateModeDesc();
+  }
+
+  function setTarget(team) {
+    freeTarget = team;
+    document.getElementById('btn-target-a').className = 'target-btn' + (team === 'A' ? ' active-a' : '');
+    document.getElementById('btn-target-b').className = 'target-btn' + (team === 'B' ? ' active-b' : '');
+  }
+
+  function updateModeDesc() {
+    const descs = {
+      '1v1': '1 joueur contre 1 joueur.',
+      '1v2': '1 joueur affronte une équipe de 2.',
+      '2v2': '2 joueurs contre 2 joueurs.',
+      '1v3': '1 joueur contre une équipe de 3.',
+      'free': 'Compose librement tes équipes : choisis l\'équipe cible (A ou B) puis clique sur les participants.'
+    };
+    document.getElementById('mode-desc').textContent = descs[mode] || '';
+  }
+
+  function renderPills() {
+    const zone = document.getElementById('pills-zone');
+    zone.innerHTML = participants.map((p, i) => {
+      const inA = teamA.includes(i);
+      const inB = teamB.includes(i);
+      const cls = inA ? 'in-team-a' : inB ? 'in-team-b' : '';
+      return `<span class="participant-pill ${cls}" onclick="toggleParticipant(${i})">${inA ? '🔵 ' : inB ? '🔴 ' : ''}${p.prenom} ${p.nom}</span>`;
+    }).join('');
+
+    const fmtTeam = arr => arr.length
+      ? arr.map(i => `<span style="display:block;font-size:14px;font-weight:600;margin:2px 0;">${participants[i].prenom} ${participants[i].nom}</span>`).join('')
+      : '<span style="color:var(--muted);font-size:13px;">Aucun</span>';
+    document.getElementById('team-a-display').innerHTML = fmtTeam(teamA);
+    document.getElementById('team-b-display').innerHTML = fmtTeam(teamB);
+  }
+
+  function toggleParticipant(i) {
+    // Si déjà dans une équipe → on le retire
+    if (teamA.includes(i)) { teamA = teamA.filter(x => x !== i); renderPills(); return; }
+    if (teamB.includes(i)) { teamB = teamB.filter(x => x !== i); renderPills(); return; }
+
+    if (mode === 'free') {
+      // En mode libre, on ajoute dans l'équipe cible choisie
+      if (freeTarget === 'A') {
+        teamA.push(i);
+      } else {
+        teamB.push(i);
+      }
+      renderPills();
+      return;
+    }
+
+    // Modes fixes : remplir A puis B selon les limites
+    const [limA, limB] = limits[mode];
+    if (teamA.length < limA) { teamA.push(i); renderPills(); return; }
+    if (teamB.length < limB) { teamB.push(i); renderPills(); return; }
+    showToast('Les équipes sont complètes pour ce mode !');
+  }
+
+  function clearSelection() { teamA = []; teamB = []; freeTarget = 'A'; setTarget('A'); renderPills(); }
+
+  function ajouterMatch() {
+    if (!teamA.length || !teamB.length) { alert('Compose les deux équipes !'); return; }
+    const overlap = teamA.filter(i => teamB.includes(i));
+    if (overlap.length) { alert('Un joueur ne peut pas être dans les deux équipes !'); return; }
+
+    const match = { id: Date.now(), teamA: [...teamA], teamB: [...teamB], winner: null, mode };
+    matches.push(match);
+    saveMatches();
+    clearSelection();
+    renderMatches();
+    showToast('⚔️ Match créé !');
+  }
+
+  function setWinner(matchId, winner) {
+    const m = matches.find(m => m.id === matchId);
+    if (!m) return;
+
+    if (m.winner) {
+      const prev = m.winner === 'A' ? m.teamA : m.teamB;
+      const prevLost = m.winner === 'A' ? m.teamB : m.teamA;
+      prev.forEach(i => { if (participants[i]) participants[i].wins = Math.max(0, participants[i].wins - 1); });
+      prevLost.forEach(i => { if (participants[i]) participants[i].losses = Math.max(0, participants[i].losses - 1); });
+    }
+
+    m.winner = winner;
+    const winners = winner === 'A' ? m.teamA : m.teamB;
+    const losers  = winner === 'A' ? m.teamB : m.teamA;
+    winners.forEach(i => { if (participants[i]) participants[i].wins++; });
+    losers.forEach(i => { if (participants[i]) participants[i].losses++; });
+
+    saveMatches();
+    saveParticipants();
+    renderMatches();
+    showToast(winner === 'A' ? '🔵 Équipe A gagne !' : '🔴 Équipe B gagne !');
+  }
+
+  function supprimerMatch(matchId) {
+    const m = matches.find(m => m.id === matchId);
+    if (m && m.winner) {
+      const winners = m.winner === 'A' ? m.teamA : m.teamB;
+      const losers  = m.winner === 'A' ? m.teamB : m.teamA;
+      winners.forEach(i => { if (participants[i]) participants[i].wins = Math.max(0, participants[i].wins - 1); });
+      losers.forEach(i => { if (participants[i]) participants[i].losses = Math.max(0, participants[i].losses - 1); });
+      saveParticipants();
+    }
+    matches = matches.filter(m => m.id !== matchId);
+    saveMatches();
+    renderMatches();
+  }
+
+  function renderMatches() {
+    const list = document.getElementById('matches-list');
+    document.getElementById('match-count').textContent = `(${matches.length} match${matches.length > 1 ? 's' : ''})`;
+    if (!matches.length) {
+      list.innerHTML = '<div class="empty-state"><span>⚔️</span>Aucun match créé. Configure un duel ci-dessus !</div>';
+      return;
+    }
+    list.innerHTML = matches.map(m => {
+      const nameA = m.teamA.map(i => participants[i] ? `${participants[i].prenom} ${participants[i].nom}` : '?').join(' & ');
+      const nameB = m.teamB.map(i => participants[i] ? `${participants[i].prenom} ${participants[i].nom}` : '?').join(' & ');
+      const played = !!m.winner;
+      return `
+        <div class="match-card ${played ? 'played' : ''}">
+          <div class="match-team a">${nameA}</div>
+          <div class="match-controls">
+            <span class="match-score">VS</span>
+            ${played
+              ? `<span class="match-result ${m.winner.toLowerCase()}">${m.winner === 'A' ? nameA : nameB} WIN</span>`
+              : `<div class="match-btns">
+                  <button class="win-btn win-a" onclick="setWinner(${m.id},'A')">🔵 A</button>
+                  <button class="win-btn win-b" onclick="setWinner(${m.id},'B')">🔴 B</button>
+                </div>`
+            }
+            <button onclick="supprimerMatch(${m.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">✕</button>
+          </div>
+          <div class="match-team b">${nameB}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function genMatchs() {
+    if (participants.length < 2) { alert('Il faut au moins 2 participants !'); return; }
+    if (!confirm('Générer tous les matchs 1v1 possible ? Cela peut créer beaucoup de matchs.')) return;
+    for (let i = 0; i < participants.length; i++) {
+      for (let j = i + 1; j < participants.length; j++) {
+        matches.push({ id: Date.now() + Math.random(), teamA: [i], teamB: [j], winner: null, mode: '1v1' });
+      }
+    }
+    saveMatches();
+    renderMatches();
+    showToast(`${matches.length} matchs générés !`);
+  }
+
+  init();
+</script>
+</body>
+</html>
