@@ -253,7 +253,7 @@
 
   // EXPORT DU CLASSEMENT EN FICHIER .TXT
 
-  async function exportTxt() {
+  function exportTxt() {
 
     // --- Re-lecture des données (au cas où elles auraient changé) ---
     const participants = JSON.parse(localStorage.getItem('widox_participants') || '[]');
@@ -351,36 +351,19 @@
     txt += '='.repeat(82) + '\n';
     // Fermeture
 
-    // TÉLÉCHARGEMENT DU FICHIER (compatible Android & tous navigateurs)
+    // TÉLÉCHARGEMENT DU FICHIER (compatible Android)
 
-    const nom      = event ? event.nom.replace(/\s+/g, '_') : 'classement';
+    const nom     = event ? event.nom.replace(/\s+/g, '_') : 'classement';
     const filename = `WIDOX_${nom}_${new Date().toISOString().slice(0,10)}.txt`;
-    const blob     = new Blob([txt], { type: 'text/plain;charset=utf-8' });
 
-    // Méthode 1 : Web Share API → ouvre le menu de partage natif Android/iOS
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'text/plain' })] })) {
-      try {
-        await navigator.share({
-          files: [new File([blob], filename, { type: 'text/plain' })],
-          title: filename
-        });
-        return;
-        // Si le partage réussit, on s'arrête ici
-      } catch(e) {
-        // L'utilisateur a annulé → on tente la méthode classique
-      }
-    }
-
-    // Méthode 2 : lien de téléchargement classique (desktop + certains Android)
-    const url = URL.createObjectURL(blob);
-    const a   = document.createElement('a');
-    a.href     = url;
-    a.download = filename;
+    // Data URI encodé : méthode la plus fiable sur Android Chrome
+    const dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
+    const a       = document.createElement('a');
+    a.setAttribute('href', dataUri);
+    a.setAttribute('download', filename);
     document.body.appendChild(a);
-    // Nécessaire sur certains navigateurs Android pour que le clic fonctionne
     a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
-    // Nettoyage après 500ms
+    document.body.removeChild(a);
   }
 
   render();
@@ -389,4 +372,3 @@
 </script>
 </body>
 </html>
-
