@@ -11,7 +11,7 @@
 <body>
 
 <nav>
-  <span class="logo-text"><img src="W_logo.png" alt="groupe" style="height:24px;vertical-align:middle;"> WIDOX</span>
+  <span class="logo-text">WIDOX</span>
   <div class="nav-links" id="nav-links">
     <a href="index.html">Accueil</a>
     <a href="page2.html">Duels</a>
@@ -108,7 +108,7 @@
           <!-- Nom du 2ème -->
           <div class="podium-wins">⚔ ${p2.wins}V / ${p2.losses}D</div>
           <!-- Ses stats -->
-          <div class="podium-wins" style="font-size:12px;opacity:.8;">📊 ${p2.points || 0} pts</div>
+          <div class="podium-wins" style="font-size:12px;opacity:.8;">🎯 ${p2.points || 0} pts</div>
           <!-- Ses points -->
           <div class="podium-stand">2</div>
           <!-- Le chiffre sur le socle -->
@@ -121,7 +121,7 @@
           <!-- Couronne + nom du vainqueur -->
           <div class="podium-wins">⚔ ${p1.wins}V / ${p1.losses}D</div>
           <!-- Ses stats -->
-          <div class="podium-wins" style="font-size:12px;opacity:.8;">📊 ${p1.points || 0} pts</div>
+          <div class="podium-wins" style="font-size:12px;opacity:.8;">🎯 ${p1.points || 0} pts</div>
           <!-- Ses points -->
           <div class="podium-stand">1</div>
           <!-- Le chiffre sur le socle -->
@@ -134,7 +134,7 @@
           <!-- Nom du 3ème -->
           <div class="podium-wins">⚔ ${p3.wins}V / ${p3.losses}D</div>
           <!-- Ses stats -->
-          <div class="podium-wins" style="font-size:12px;opacity:.8;">📊 ${p3.points || 0} pts</div>
+          <div class="podium-wins" style="font-size:12px;opacity:.8;">🎯 ${p3.points || 0} pts</div>
           <!-- Ses points -->
           <div class="podium-stand">3</div>
           <!-- Le chiffre sur le socle -->
@@ -222,7 +222,7 @@
         <div class="rank-cell losses">${p.losses}</div>
         <!-- Nombre de défaites -->
 
-        <div class="rank-cell" style="color:var(--accent);font-weight:700;">📊 ${p.points || 0}</div>
+        <div class="rank-cell" style="color:var(--accent);font-weight:700;">🎯 ${p.points || 0}</div>
         <!-- Points accumulés dans les duels (critère de départage) -->
 
         <div class="rank-cell ratio">${ratio}%</div>
@@ -253,7 +253,7 @@
 
   // EXPORT DU CLASSEMENT EN FICHIER .TXT
 
-  function exportTxt() {
+  async function exportTxt() {
 
     // --- Re-lecture des données (au cas où elles auraient changé) ---
     const participants = JSON.parse(localStorage.getItem('widox_participants') || '[]');
@@ -351,31 +351,36 @@
     txt += '='.repeat(82) + '\n';
     // Fermeture
 
-    // TÉLÉCHARGEMENT DU FICHIER
+    // TÉLÉCHARGEMENT DU FICHIER (compatible Android & tous navigateurs)
 
-    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-    // Crée un objet "fichier" en mémoire avec le texte
+    const nom      = event ? event.nom.replace(/\s+/g, '_') : 'classement';
+    const filename = `WIDOX_${nom}_${new Date().toISOString().slice(0,10)}.txt`;
+    const blob     = new Blob([txt], { type: 'text/plain;charset=utf-8' });
 
+    // Méthode 1 : Web Share API → ouvre le menu de partage natif Android/iOS
+    if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'text/plain' })] })) {
+      try {
+        await navigator.share({
+          files: [new File([blob], filename, { type: 'text/plain' })],
+          title: filename
+        });
+        return;
+        // Si le partage réussit, on s'arrête ici
+      } catch(e) {
+        // L'utilisateur a annulé → on tente la méthode classique
+      }
+    }
+
+    // Méthode 2 : lien de téléchargement classique (desktop + certains Android)
     const url = URL.createObjectURL(blob);
-    // Génère une adresse temporaire pour ce fichier
-
-    const a = document.createElement('a');
-    // Crée un lien <a> invisible
-
-    const nom = event ? event.nom.replace(/\s+/g, '_') : 'classement';
-    // Nom du fichier basé sur l'événement (espaces → underscores)
-
-    a.href = url;
-    // Pointe le lien vers le fichier
-
-    a.download = `WIDOX_${nom}_${new Date().toISOString().slice(0,10)}.txt`;
-    // Nom du fichier téléchargé : WIDOX_NomEvent_2025-01-15.txt
-
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    // Nécessaire sur certains navigateurs Android pour que le clic fonctionne
     a.click();
-    // Simule un clic pour lancer le téléchargement
-
-    URL.revokeObjectURL(url);
-    // Libère la mémoire de l'adresse temporaire
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+    // Nettoyage après 500ms
   }
 
   render();
@@ -384,3 +389,4 @@
 </script>
 </body>
 </html>
+
