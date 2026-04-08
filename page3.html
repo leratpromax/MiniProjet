@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classement – WIDOX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSSevent.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo-text"><img src="W_logo.png" alt="groupe" style="height:24px;vertical-align:middle;"> WIDOX</span>
+  <div class="nav-links" id="nav-links">
+    <a href="index.html">Accueil</a>
+    <a href="page2.html">Duels</a>
+    <a href="page3.html" class="active">Classement</a>
+    <!-- class="active" → cette page est la page actuelle -->
+  </div>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleNav()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main>
+  <div class="hero-label green">Résultats officiels</div>
+  <!-- Étiquette verte décorative -->
+
+  <h1>🏆 Le <span class="green">Classement</span></h1>
+  <!-- Titre principal avec "Classement" en couleur verte -->
+
+  <div id="app">
+    <!-- Conteneur principal : tout le contenu sera généré par JavaScript ici -->
+    <div class="empty-state"><span>👥</span>Aucun participant enregistré.<br><a href="index.html" style="color:var(--accent)">→ Retour à l'accueil</a></div>
+    <!-- Message temporaire affiché pendant le chargement -->
+  </div>
+</main>
+
+<script>
+
+  // CHARGEMENT DES DONNÉES DEPUIS LE STOCKAGE LOCAL
+
+  const participants = JSON.parse(localStorage.getItem('widox_participants') || '[]');
+  // Récupère la liste des participants (ou tableau vide)
+
+  const matches      = JSON.parse(localStorage.getItem('widox_matches') || '[]');
+  // Récupère la liste des matchs (ou tableau vide)
+
+  const event        = JSON.parse(localStorage.getItem('widox_event') || 'null');
+  // Récupère l'événement (ou null si aucun)
+
+  // === MENU HAMBURGER MOBILE ===
+  function toggleNav() {
+    document.getElementById('nav-links').classList.toggle('open');
+    // Ouvre ou ferme le menu mobile
+  }
+
+  // === FONCTION PRINCIPALE D'AFFICHAGE
+
+  function render() {
+    const app = document.getElementById('app');
+    // Récupère le conteneur principal
+
+    // --- CAS : Aucun participant ---
+    if (!participants.length) {
+      app.innerHTML = `<div class="empty-state"><span>👥</span>Aucun participant enregistré.<br><a href="index.html" style="color:var(--accent)">→ Retour à l'accueil</a></div>`;
+      // Affiche un message avec lien retour
+      return;
+      // Arrête la fonction ici
+    }
+
+    // === TRI DES PARTICIPANTS ===
+    const ranked = [...participants].sort((a, b) => {
+      // Copie le tableau et le trie
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      // D'abord par victoires (le plus → en haut)
+      if ((b.points || 0) !== (a.points || 0)) return (b.points || 0) - (a.points || 0);
+      // Si égalité de victoires : plus de points → en haut
+      return a.losses - b.losses;
+      // Si toujours égalité : moins de défaites → en haut
+    });
+
+    // === COMPTEURS DE MATCHS ===
+    const totalMatches = matches.filter(m => m.winner).length;
+    // Nombre de matchs qui ont un vainqueur (terminés)
+
+    const totalPlayed  = matches.length;
+    // Nombre total de matchs créés
+
+    let html = '';
+    // Variable qui va accumuler tout le HTML à afficher
+
+    // === PODIUM (TOP 3)
+
+    if (ranked.length >= 1) {
+      // S'il y a au moins 1 participant
+      const p1 = ranked[0], p2 = ranked[1] || null, p3 = ranked[2] || null;
+      // p1 = 1er, p2 = 2ème (ou null), p3 = 3ème (ou null)
+
+      html += `<div class="podium">`;
+      // Ouvre le conteneur podium
+
+      // --- 2ème place (à gauche) ---
+      if (p2) html += `
+        <div class="podium-slot podium-2">
+          <div class="podium-name">${p2.prenom} ${p2.nom}</div>
+          <!-- Nom du 2ème -->
+          <div class="podium-wins">⚔ ${p2.wins}V / ${p2.losses}D</div>
+          <!-- Ses stats -->
+          <div class="podium-wins" style="font-size:12px;opacity:.8;">📊 ${p2.points || 0} pts</div>
+          <!-- Ses points -->
+          <div class="podium-stand">2</div>
+          <!-- Le chiffre sur le socle -->
+        </div>`;
+
+      // --- 1ère place (au centre, le plus haut) ---
+      html += `
+        <div class="podium-slot podium-1">
+          <div class="podium-name">👑 ${p1.prenom} ${p1.nom}</div>
+          <!-- Couronne + nom du vainqueur -->
+          <div class="podium-wins">⚔ ${p1.wins}V / ${p1.losses}D</div>
+          <!-- Ses stats -->
+          <div class="podium-wins" style="font-size:12px;opacity:.8;">📊 ${p1.points || 0} pts</div>
+          <!-- Ses points -->
+          <div class="podium-stand">1</div>
+          <!-- Le chiffre sur le socle -->
+        </div>`;
+
+      //  3ème place (à droite)
+      if (p3) html += `
+        <div class="podium-slot podium-3">
+          <div class="podium-name">${p3.prenom} ${p3.nom}</div>
+          <!-- Nom du 3ème -->
+          <div class="podium-wins">⚔ ${p3.wins}V / ${p3.losses}D</div>
+          <!-- Ses stats -->
+          <div class="podium-wins" style="font-size:12px;opacity:.8;">📊 ${p3.points || 0} pts</div>
+          <!-- Ses points -->
+          <div class="podium-stand">3</div>
+          <!-- Le chiffre sur le socle -->
+        </div>`;
+
+      html += `</div>`;
+      // Ferme le conteneur podium
+    }
+
+    // CARTES DE STATISTIQUES
+
+    html += `
+    <div class="stats-row">
+      <!-- Ligne de 3 cartes stats côte à côte -->
+      <div class="stat-card"><div class="stat-num">${participants.length}</div><div class="stat-label">Participants</div></div>
+      <!-- Carte : nombre total de participants -->
+      <div class="stat-card"><div class="stat-num">${totalMatches}</div><div class="stat-label">Matchs joués</div></div>
+      <!-- Carte : matchs terminés (avec vainqueur) -->
+      <div class="stat-card"><div class="stat-num">${totalPlayed}</div><div class="stat-label">Matchs créés</div></div>
+      <!-- Carte : matchs créés au total -->
+    </div>`;
+
+    // TABLEAU CLASSEMENT COMPLET
+    
+    html += `
+    <div class="card">
+      <div class="card-title">Classement complet</div>
+      <!-- Titre de la carte -->
+
+      <div class="rank-header">
+        <!-- En-tête du tableau -->
+        <span>#</span>
+        <!-- Colonne : rang -->
+        <span>Joueur</span>
+        <!-- Colonne : nom du joueur -->
+        <span>Victoires</span>
+        <!-- Colonne : nombre de victoires -->
+        <span>Défaites</span>
+        <!-- Colonne : nombre de défaites -->
+        <span>Points</span>
+        <!-- Colonne : points accumulés dans les duels -->
+        <span>Ratio</span>
+        <!-- Colonne : pourcentage de victoires -->
+        <span>Matchs</span>
+        <!-- Colonne : total de matchs joués -->
+      </div>`;
+
+    // === BOUCLE : UNE LIGNE PAR PARTICIPANT ===
+    ranked.forEach((p, i) => {
+      const rank = i + 1;
+      // Position dans le classement (commence à 1)
+
+      const total = p.wins + p.losses;
+      // Nombre total de matchs joués par ce joueur
+
+      const ratio = total > 0 ? Math.round((p.wins / total) * 100) : 0;
+      // Pourcentage de victoires (0 si aucun match)
+
+      const rowCls = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
+      // Classe CSS spéciale pour les 3 premiers (couleur de fond)
+
+      const numCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+      // Classe CSS pour le badge du numéro de rang
+
+      const medal  = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+      // Médaille emoji pour le top 3, sinon le numéro simple
+
+      html += `
+      <div class="rank-row ${rowCls}">
+        <!-- Ligne du classement -->
+
+        <div class="rank-num ${numCls}">${medal}</div>
+        <!-- Badge rang : médaille ou numéro -->
+
+        <div>
+          <div class="rank-name">${p.prenom} ${p.nom}</div>
+          <!-- Nom du joueur -->
+          <div class="winrate-bar"><div class="winrate-fill" style="width:${ratio}%"></div></div>
+          <!-- Barre de progression du ratio de victoires -->
+        </div>
+
+        <div class="rank-cell wins">${p.wins}</div>
+        <!-- Nombre de victoires -->
+
+        <div class="rank-cell losses">${p.losses}</div>
+        <!-- Nombre de défaites -->
+
+        <div class="rank-cell" style="color:var(--accent);font-weight:700;">📊 ${p.points || 0}</div>
+        <!-- Points accumulés dans les duels (critère de départage) -->
+
+        <div class="rank-cell ratio">${ratio}%</div>
+        <!-- Ratio en pourcentage -->
+
+        <div class="rank-cell played">${total}</div>
+        <!-- Total de matchs joués -->
+      </div>`;
+    });
+
+    html += `</div>`;
+    // Ferme la carte du classement
+
+    // === BOUTONS EN BAS DE PAGE
+
+    html += `
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;">
+      <!-- Conteneur flex pour les boutons côte à côte -->
+      <a href="page2.html" class="btn btn-red" style="color:white;">⚔️ Retour aux duels</a>
+      <!-- Lien-bouton rouge vers la page des duels -->
+      <button class="btn btn-outline" onclick="exportTxt()">📄 Exporter en .txt</button>
+      <!-- Bouton pour télécharger le classement en fichier texte -->
+    </div>`;
+
+    app.innerHTML = html;
+    // Injecte tout le HTML généré dans le conteneur #app
+  }
+
+  // EXPORT DU CLASSEMENT EN FICHIER .TXT
+
+  function exportTxt() {
+
+    // --- Re-lecture des données (au cas où elles auraient changé) ---
+    const participants = JSON.parse(localStorage.getItem('widox_participants') || '[]');
+    const matches      = JSON.parse(localStorage.getItem('widox_matches') || '[]');
+    const event        = JSON.parse(localStorage.getItem('widox_event') || 'null');
+
+    if (!participants.length) { alert('Aucun participant à exporter !'); return; }
+    // Bloque si aucun participant
+
+    // Tri identique au classement affiché
+    const ranked = [...participants].sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if ((b.points || 0) !== (a.points || 0)) return (b.points || 0) - (a.points || 0);
+      return a.losses - b.losses;
+    });
+
+    const totalJoues  = matches.filter(m => m.winner).length;
+    // Matchs terminés
+
+    const totalCreees = matches.length;
+    // Matchs créés au total
+
+    const now         = new Date().toLocaleString('fr-FR');
+    // Date et heure actuelle en format français
+
+    const medals      = ['🥇', '🥈', '🥉'];
+    // Médailles pour le top 3
+
+    // === CONSTRUCTION DU TEXTE ===
+
+    let txt = '';
+
+    // --- En-tête du fichier ---
+    txt += 'WIDOX – CLASSEMENT FINAL\n';
+    // Titre du document
+
+    if (event) {
+      txt += `Événement : ${event.nom}\n`;
+      // Nom de l'événement
+      if (event.desc) txt += `Description : ${event.desc}\n`;
+      // Description (si elle existe)
+    }
+
+    txt += `Exporté le : ${now}\n`;
+    // Date d'export
+
+    txt += `Participants : ${participants.length}  |  Matchs joués : ${totalJoues}  |  Matchs créés : ${totalCreees}\n`;
+    // Résumé chiffré
+
+    // Fonction utilitaire pour aligner les colonnes
+    const col = (str, len) => String(str).padEnd(len);
+    // Complète une chaîne avec des espaces pour atteindre la longueur voulue
+
+    // En-tête du tableau texte
+    txt += col('#', 4) + col('Joueur', 22) + col('Victoires', 12) + col('Défaites', 12) + col('Points', 10) + col('Ratio', 10) + 'Matchs\n';
+    // Noms des colonnes
+
+    txt += '-'.repeat(82) + '\n';
+    // Ligne de séparation (82 tirets)
+
+    // Lignes du tableau : une par participant
+    ranked.forEach((p, i) => {
+      const rank  = i + 1;
+      // Position dans le classement
+
+      const total = p.wins + p.losses;
+      // Total de matchs joués
+
+      const ratio = total > 0 ? Math.round((p.wins / total) * 100) + '%' : '0%';
+      // Ratio en pourcentage (texte)
+
+      const medal = rank <= 3 ? medals[i] + ' ' : '   ';
+      // Médaille si top 3, sinon espace vide
+
+      const num   = String(rank).padEnd(2);
+      // Numéro de rang aligné
+
+      txt += col(num, 4)
+           + col(`${p.prenom} ${p.nom}`, 22)
+           + col(`${p.wins} V`, 12)
+           + col(`${p.losses} D`, 12)
+           + col(`${p.points || 0} pts`, 10)
+           + col(ratio, 10)
+           + `${total}\n`;
+      // Une ligne complète du tableau
+    });
+
+    // Pied de fichier : le vainqueur
+    txt += '\n' + '='.repeat(82) + '\n';
+    // Double ligne de séparation
+
+    txt += `Vainqueur : ${ranked[0].prenom} ${ranked[0].nom} (${ranked[0].wins} victoires · ${ranked[0].points || 0} points)\n`;
+    // Annonce du grand gagnant avec ses points
+
+    txt += '='.repeat(82) + '\n';
+    // Fermeture
+
+    // TÉLÉCHARGEMENT DU FICHIER
+
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+    // Crée un objet "fichier" en mémoire avec le texte
+
+    const url = URL.createObjectURL(blob);
+    // Génère une adresse temporaire pour ce fichier
+
+    const a = document.createElement('a');
+    // Crée un lien <a> invisible
+
+    const nom = event ? event.nom.replace(/\s+/g, '_') : 'classement';
+    // Nom du fichier basé sur l'événement (espaces → underscores)
+
+    a.href = url;
+    // Pointe le lien vers le fichier
+
+    a.download = `WIDOX_${nom}_${new Date().toISOString().slice(0,10)}.txt`;
+    // Nom du fichier téléchargé : WIDOX_NomEvent_2025-01-15.txt
+
+    a.click();
+    // Simule un clic pour lancer le téléchargement
+
+    URL.revokeObjectURL(url);
+    // Libère la mémoire de l'adresse temporaire
+  }
+
+  render();
+  // Affiche le classement dès que la page se charge
+
+</script>
+</body>
+</html>
